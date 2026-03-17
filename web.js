@@ -240,8 +240,8 @@ a{color:inherit;text-decoration:none}
 .sb-foot{padding:14px;border-top:1px solid var(--border)}
 .logout{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.15);border-radius:9px;color:#ff8fa3;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s}
 .logout:hover{background:rgba(255,77,109,.15)}
-.main{margin-left:var(--sb);flex:1;display:flex;flex-direction:column;min-height:100vh}
-.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.main{margin-left:var(--sb);flex:1;display:flex;flex-direction:column;min-height:100vh;overflow:hidden}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;flex-shrink:0}
 .topbar-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700}
 .topbar-r{display:flex;align-items:center;gap:10px}
 .badge-live{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--green);background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.2);padding:4px 10px;border-radius:20px}
@@ -249,8 +249,9 @@ a{color:inherit;text-decoration:none}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .ref-btn{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:6px 12px;color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s}
 .ref-btn:hover{border-color:var(--cyan2);color:var(--cyan)}
-.content{padding:28px;flex:1}
-.sec{display:none}.sec.on{display:block}
+.content{padding:28px;flex:1;display:flex;flex-direction:column;overflow:hidden}
+.sec{display:none;flex:1;flex-direction:column}.sec.on{display:flex}
+#sec-overview,#sec-laporan,#sec-panduan,#sec-grup{overflow-y:auto}
 .sec-title{font-family:'Syne',sans-serif;font-size:21px;font-weight:800;margin-bottom:3px}
 .sec-sub{font-size:12px;color:var(--muted);margin-bottom:22px}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
@@ -322,10 +323,13 @@ tr:hover td{background:rgba(13,31,60,.5)}
 .fb-status.ok{background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.25);color:var(--green);display:block}
 .fb-status.err{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.25);color:#ff8fa3;display:block}
 /* ── LiveChat ── */
-.lc-layout{display:grid;grid-template-columns:300px 1fr;gap:14px;height:calc(100vh - 180px);min-height:500px}
-.lc-list{background:var(--card);border:1px solid var(--border);border-radius:15px;overflow:hidden;display:flex;flex-direction:column}
+#sec-livechat{height:calc(100vh - 152px);display:flex;flex-direction:column}
+#sec-livechat .sec-title{flex-shrink:0}
+#sec-livechat .sec-sub{flex-shrink:0}
+.lc-layout{flex:1;min-height:0;display:grid;grid-template-columns:300px 1fr;gap:14px}
+.lc-list{background:var(--card);border:1px solid var(--border);border-radius:15px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
 .lc-list-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.lc-list-body{overflow-y:auto;flex:1}
+.lc-list-body{overflow-y:auto;flex:1;min-height:0}
 .lc-item{padding:14px 16px;border-bottom:1px solid rgba(26,51,86,.4);cursor:pointer;transition:background .15s;display:flex;align-items:flex-start;gap:10px}
 .lc-item:hover{background:rgba(0,200,255,.05)}
 .lc-item.active{background:rgba(0,200,255,.1);border-left:3px solid var(--cyan)}
@@ -336,12 +340,12 @@ tr:hover td{background:rgba(13,31,60,.5)}
 .lc-preview{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .lc-time{font-size:10px;color:var(--muted);flex-shrink:0}
 .lc-unread{background:var(--cyan);color:#040d1a;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;margin-left:4px}
-.lc-chat{background:var(--card);border:1px solid var(--border);border-radius:15px;overflow:hidden;display:flex;flex-direction:column}
+.lc-chat{background:var(--card);border:1px solid var(--border);border-radius:15px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
 .lc-chat-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .lc-chat-info{display:flex;align-items:center;gap:12px}
 .lc-status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
 .lc-status-dot.closed{background:var(--muted)}
-.lc-msgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px}
+.lc-msgs{flex:1;overflow-y:auto;min-height:0;padding:18px;display:flex;flex-direction:column;gap:10px}
 .lc-msg{max-width:72%;display:flex;flex-direction:column;gap:3px}
 .lc-msg.user{align-self:flex-start}
 .lc-msg.admin{align-self:flex-end;align-items:flex-end}
@@ -529,7 +533,7 @@ tr:hover td{background:rgba(13,31,60,.5)}
         </div>
         <div class="lc-chat" id="lc-chat-panel">
           <div class="lc-empty" id="lc-no-chat"><div style="font-size:40px">💬</div><div>Pilih sesi untuk membalas</div></div>
-          <div id="lc-active-chat" style="display:none;flex:1;flex-direction:column">
+          <div id="lc-active-chat" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0">
             <div class="lc-chat-head">
               <div class="lc-chat-info">
                 <div class="lc-status-dot" id="lc-status-dot"></div>
