@@ -1,0 +1,23 @@
+{
+  "name": "hallo-johor-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp Bot Layanan Kecamatan Medan Johor",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node start.js",
+    "bot": "node index.js",
+    "web": "node web.js",
+    "dev": "node start.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^6.7.9",
+    "axios": "^1.7.2",
+    "exceljs": "^4.4.0",
+    "pino": "^9.3.2"
+  }
+}
