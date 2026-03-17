@@ -79,7 +79,6 @@ const getLaporan = () => {
   return (d.laporan || []).sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
 };
 const getGroups = () => (readJSON('laporan_groups.json').groups || []);
-const getGroupRouting = () => (readJSON('group_routing.json').routing || {});
 const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const fmtDate = (iso) => {
   try {
