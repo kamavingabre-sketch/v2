@@ -250,8 +250,9 @@ a{color:inherit;text-decoration:none}
 .ref-btn{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:6px 12px;color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s}
 .ref-btn:hover{border-color:var(--cyan2);color:var(--cyan)}
 .content{padding:28px;flex:1;display:flex;flex-direction:column;overflow:hidden}
-.sec{display:none;flex:1;flex-direction:column}.sec.on{display:flex}
-#sec-overview,#sec-laporan,#sec-panduan,#sec-grup{overflow-y:auto}
+.sec{display:none}
+.sec.on{display:block;flex:1;overflow-y:auto}
+#sec-livechat.on{display:flex;flex-direction:column;overflow:hidden;height:calc(100vh - 152px)}
 .sec-title{font-family:'Syne',sans-serif;font-size:21px;font-weight:800;margin-bottom:3px}
 .sec-sub{font-size:12px;color:var(--muted);margin-bottom:22px}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
@@ -323,7 +324,6 @@ tr:hover td{background:rgba(13,31,60,.5)}
 .fb-status.ok{background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.25);color:var(--green);display:block}
 .fb-status.err{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.25);color:#ff8fa3;display:block}
 /* ── LiveChat ── */
-#sec-livechat{height:calc(100vh - 152px);display:flex;flex-direction:column}
 #sec-livechat .sec-title{flex-shrink:0}
 #sec-livechat .sec-sub{flex-shrink:0}
 .lc-layout{flex:1;min-height:0;display:grid;grid-template-columns:300px 1fr;gap:14px}
@@ -375,7 +375,7 @@ tr:hover td{background:rgba(13,31,60,.5)}
 .add-grp-input:focus{border-color:var(--green)}
 .add-grp-btn{background:linear-gradient(135deg,rgba(0,229,160,.2),rgba(0,229,160,.12));border:1px solid rgba(0,229,160,.35);border-radius:8px;padding:9px 18px;color:var(--green);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
 .add-grp-btn:hover{background:rgba(0,229,160,.25)}
-.routing-box{background:rgba(0,200,255,.03);border:1px solid rgba(0,200,255,.15);border-radius:12px;overflow:hidden;margin-bottom:16px}
+.routing-box{background:rgba(0,200,255,.03);border:1px solid rgba(0,200,255,.15);border-radius:12px;overflow:visible;margin-bottom:16px}
 .routing-head{padding:16px 20px;border-bottom:1px solid rgba(0,200,255,.15);display:flex;align-items:center;justify-content:space-between;gap:12px}
 .save-routing-btn{background:linear-gradient(135deg,#0090c8,var(--cyan));border:none;border-radius:8px;padding:8px 18px;color:#040d1a;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .2s}
 .save-routing-btn:hover{opacity:.85}
@@ -491,10 +491,12 @@ tr:hover td{background:rgba(13,31,60,.5)}
           </div>
           <button class="save-routing-btn" onclick="saveRouting()">💾 Simpan Routing</button>
         </div>
+        <div style="overflow:hidden;border-radius:0 0 12px 12px">
         <table style="width:100%">
           <thead><tr><th style="padding:11px 14px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;background:var(--bg3);border-bottom:1px solid var(--border)">Kategori</th><th style="padding:11px 14px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;background:var(--bg3);border-bottom:1px solid var(--border)">Grup Tujuan</th></tr></thead>
           <tbody id="routing-tbody">${routingRows}</tbody>
         </table>
+        </div>
         <div id="routing-status" class="routing-status" style="margin:10px 14px 14px"></div>
       </div>
 
