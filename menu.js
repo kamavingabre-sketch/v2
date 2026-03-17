@@ -781,7 +781,8 @@ export const KATEGORI_PENGADUAN = [
   { id: '3', label: 'Lampu Jalan Mati', emoji: '💡' },
   { id: '4', label: 'Drainase Tersumbat', emoji: '🌊' },
   { id: '5', label: 'Administrasi Pelayanan', emoji: '📋' },
-  { id: '6', label: 'Lainnya', emoji: '📌' },
+  { id: '6', label: 'Bangunan Liar', emoji: '🏚️' },
+  { id: '7', label: 'Lainnya', emoji: '📌' },
 ];
 
 export const KELURAHAN_LIST = [
@@ -801,7 +802,7 @@ export const buildKategoriMenu = () => {
     text += `${k.emoji} *${k.id}* — ${k.label}\n`;
   }
   text += `\n━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  text += `Ketik *angka* kategori (1-6)\nAtau ketik *0* untuk batal`;
+  text += `Ketik *angka* kategori (1-7)\nAtau ketik *0* untuk batal`;
   return text;
 };
 

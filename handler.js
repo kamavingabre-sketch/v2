@@ -17,6 +17,7 @@ import {
   getSession, setSession, clearSession,
   getLaporanGroups, addLaporanGroup, removeLaporanGroup,
   getNextLaporanId, saveLaporan,
+  getGroupRouting,
   getLivechatByJid, startLivechatSession, addLivechatMessage, closeLivechatSession
 } from './store.js';
 import {
@@ -341,7 +342,7 @@ const handleLaporanFlow = async (sock, jid, name, msg, session, { textMsg, image
       const kategori = KATEGORI_PENGADUAN.find(k => k.id === textMsg);
       if (!kategori) {
         await sendText(sock, jid,
-          `⚠️ Pilihan tidak valid. Silakan ketik angka *1-6* sesuai kategori.\n\nAtau ketik *0* untuk batal.`
+          `⚠️ Pilihan tidak valid. Silakan ketik angka *1-7* sesuai kategori.\n\nAtau ketik *0* untuk batal.`
         );
         return;
       }
@@ -533,12 +534,28 @@ const handleLaporanFlow = async (sock, jid, name, msg, session, { textMsg, image
         `Ketik *menu* untuk kembali ke menu utama.`
       );
 
-      // ── Kirim ke semua grup yang terdaftar ──
+      // ── Kirim ke grup sesuai routing kategori ──
       const groups = getLaporanGroups();
       if (groups.length === 0) {
         logger.warn('LAPORAN', 'Tidak ada grup laporan terdaftar! Ketik "applylaporan" di grup tujuan.');
         clearSession(jid);
         return;
+      }
+
+      // Cek routing: forward ke grup spesifik sesuai kategori jika dikonfigurasi
+      const routing = getGroupRouting();
+      const routedGroupId = routing[session.kategori];
+      let forwardGroups;
+      if (routedGroupId) {
+        const matched = groups.filter(g => g.id === routedGroupId);
+        forwardGroups = matched.length > 0 ? matched : groups; // fallback ke semua jika grup routing sudah dihapus
+        if (matched.length === 0) {
+          logger.warn('LAPORAN', `Grup routing untuk kategori "${session.kategori}" tidak ditemukan, fallback ke semua grup`);
+        } else {
+          logger.info('LAPORAN', `Routing aktif: kategori "${session.kategori}" → grup "${matched[0].name}"`);
+        }
+      } else {
+        forwardGroups = groups; // tidak ada routing → forward ke semua grup
       }
 
       const groupText =
@@ -563,7 +580,7 @@ const handleLaporanFlow = async (sock, jid, name, msg, session, { textMsg, image
       const phone = jid.replace('@s.whatsapp.net', '');
       const vcard = buildVCard(name, phone);
 
-      for (const group of groups) {
+      for (const group of forwardGroups) {
         try {
           // 1. Kirim teks laporan
           await sendText(sock, group.id, groupText);

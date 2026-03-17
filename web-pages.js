@@ -1,95 +1,23 @@
-// ╔══════════════════════════════════════════════════════════╗
-// ║     WEB DASHBOARD - Admin Laporan Kecamatan              ║
-// ║     Hallo Johor — Medan Johor                            ║
-// ║     Jalankan: node web.js                                ║
-// ╚══════════════════════════════════════════════════════════╝
+// ═══════════════════════════════════════════════════════════
+//   WEB-PAGES.JS — HTML Page Templates
+//   Hallo Johor Dashboard: Login & Dashboard
+// ═══════════════════════════════════════════════════════════
 
-import http from 'http';
-import ExcelJS from 'exceljs';
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
-import { fileURLToPath } from 'url';
-import { queueFeedback, getLivechatSessions, addLivechatMessage, closeLivechatSessionById, markLivechatRead, queueLivechatReply, addLaporanGroup, removeLaporanGroup, getGroupRouting, setGroupRouting, deleteLaporan } from './store.js';
-import { KATEGORI_PENGADUAN } from './menu.js';
+// ─── Shared Helpers ───────────────────────────────────────
+export const esc = (s) =>
+  String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const CONFIG = {
-  PORT: process.env.PORT || process.env.WEB_PORT || 3000,
-  ADMIN_USERNAME: process.env.ADMIN_USER || 'admin',
-  ADMIN_PASSWORD: process.env.ADMIN_PASS || 'medanjohor2025',
-  DATA_DIR: './data',
-  SESSION_EXPIRE_HOURS: 8,
-};
-
-const sessions = new Map();
-const createSession = () => {
-  const token = crypto.randomBytes(32).toString('hex');
-  sessions.set(token, { createdAt: Date.now() });
-  return token;
-};
-const validateSession = (token) => {
-  if (!token || !sessions.has(token)) return false;
-  const s = sessions.get(token);
-  if (Date.now() - s.createdAt > CONFIG.SESSION_EXPIRE_HOURS * 3600000) {
-    sessions.delete(token);
-    return false;
-  }
-  return true;
-};
-const parseCookies = (req) => {
-  const raw = req.headers.cookie || '';
-  return Object.fromEntries(
-    raw.split(';').map(c => {
-      const [k, ...v] = c.trim().split('=');
-      return [k?.trim(), decodeURIComponent(v.join('='))];
-    }).filter(([k]) => k)
-  );
-};
-const parseBody = (req) => new Promise(resolve => {
-  let body = '';
-  req.on('data', chunk => body += chunk);
-  req.on('end', () => {
-    try { resolve(Object.fromEntries(new URLSearchParams(body))); }
-    catch { resolve({}); }
-  });
-});
-
-const parseJSONBody = (req) => new Promise(resolve => {
-  let body = '';
-  req.on('data', chunk => body += chunk);
-  req.on('end', () => {
-    try { resolve(JSON.parse(body)); }
-    catch { resolve({}); }
-  });
-});
-
-// Pastikan folder foto_feedback tersedia
-const FOTO_FEEDBACK_DIR = path.join(__dirname, CONFIG.DATA_DIR, 'foto_feedback');
-if (!fs.existsSync(FOTO_FEEDBACK_DIR)) fs.mkdirSync(FOTO_FEEDBACK_DIR, { recursive: true });
-
-const readJSON = (file) => {
-  const p = path.join(__dirname, CONFIG.DATA_DIR, file);
-  if (!fs.existsSync(p)) return {};
-  try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return {}; }
-};
-const getLaporan = () => {
-  const d = readJSON('laporan_archive.json');
-  return (d.laporan || []).sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
-};
-const getGroups = () => (readJSON('laporan_groups.json').groups || []);
-const getGroupRouting = () => (readJSON('group_routing.json').routing || {});
-const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const fmtDate = (iso) => {
+export const fmtDate = (iso) => {
   try {
     return new Date(iso).toLocaleString('id-ID', {
-      timeZone:'Asia/Jakarta', day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'
+      timeZone:'Asia/Jakarta', day:'2-digit', month:'short',
+      year:'numeric', hour:'2-digit', minute:'2-digit'
     });
   } catch { return iso || '-'; }
 };
 
-const pageLogin = (error = '') => `<!DOCTYPE html>
+// ─── Login Page ───────────────────────────────────────────
+export const pageLogin = (error = '') => `<!DOCTYPE html>
 <html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Login — Hallo Johor Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
@@ -134,7 +62,8 @@ input:focus{border-color:#0090c8;box-shadow:0 0 0 3px rgba(0,200,255,.1)}
   <p class="foot">Kecamatan Medan Johor — Sistem Pengaduan Digital</p>
 </div></body></html>`;
 
-const pageDashboard = (laporan, groups, routing = {}) => {
+// ─── Dashboard Page ───────────────────────────────────────
+export const pageDashboard = (laporan, groups) => {
   const total = laporan.length;
   const now = new Date();
   const today = laporan.filter(l => new Date(l.tanggal).toDateString() === now.toDateString()).length;
@@ -173,7 +102,7 @@ const pageDashboard = (laporan, groups, routing = {}) => {
       <td class="fz13 text-muted2" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(l.isi)}">${esc((l.isi||'').substring(0,60))}${(l.isi||'').length>60?'…':''}</td>
       <td><a class="map-link" href="https://maps.google.com/?q=${l.koordinat?.lat||0},${l.koordinat?.lon||0}" target="_blank">📍 Peta</a></td>
       <td class="fz12 text-muted2">${fmtDate(l.tanggal)}</td>
-      <td style="white-space:nowrap"><button class="det-btn" onclick='showDetail(${JSON.stringify(JSON.stringify(l))})'>Detail</button><button class="del-lap-btn" data-id="${l.id}" onclick="deleteLaporanRow(this.dataset.id,this)">🗑️</button></td>
+      <td><button class="det-btn" onclick='showDetail(${JSON.stringify(JSON.stringify(l))})'>Detail</button></td>
     </tr>`).join('');
 
   const katOpts = allKat.map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join('');
@@ -184,27 +113,8 @@ const pageDashboard = (laporan, groups, routing = {}) => {
       <td><span class="id-badge fz11">${esc(g.id)}</span></td>
       <td class="fz12 text-muted2">${fmtDate(g.addedAt)}</td>
       <td><span class="status-ok">● Aktif</span></td>
-      <td><button class="del-grp-btn" data-id="${esc(g.id)}" data-name="${esc(g.name||g.id)}" onclick="deleteGroup(this.dataset.id,this.dataset.name)">🗑️ Hapus</button></td>
     </tr>`).join('') :
-    `<tr><td colspan="5" class="empty-row">Belum ada grup terdaftar</td></tr>`;
-
-  // Routing dropdowns data (baked server-side)
-  const routingGroupOpts = groups.map(g=>`<option value="${esc(g.id)}">${esc(g.name||g.id)}</option>`).join('');
-  const routingRows = KATEGORI_PENGADUAN.map(k => {
-    const selected = routing[k.label] || '';
-    const groupSelects = groups.map(g =>
-      `<option value="${esc(g.id)}"${selected===g.id?' selected':''}>${esc(g.name||g.id)}</option>`
-    ).join('');
-    return `<tr>
-      <td style="padding:11px 14px;border-bottom:1px solid rgba(26,51,86,.4);font-size:13px">${k.emoji} ${esc(k.label)}</td>
-      <td style="padding:8px 14px;border-bottom:1px solid rgba(26,51,86,.4)">
-        <select id="rt-${esc(k.label)}" style="background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:7px 10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;outline:none;width:100%;max-width:280px">
-          <option value=""${!selected?' selected':''}>🌐 Semua Grup (default)</option>
-          ${groupSelects}
-        </select>
-      </td>
-    </tr>`;
-  }).join('');
+    `<tr><td colspan="4" class="empty-row">Belum ada grup terdaftar</td></tr>`;
 
   const recentRows = laporan.slice(0,5).map(l=>`
     <tr>
@@ -361,24 +271,8 @@ tr:hover td{background:rgba(13,31,60,.5)}
 .lc-close-btn:hover{background:rgba(255,77,109,.2)}
 .lc-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;gap:10px}
 .lc-closed-banner{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.2);border-radius:8px;padding:10px 14px;font-size:12px;color:#ff8fa3;text-align:center;margin:0 16px 12px}
-.del-grp-btn{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.2);border-radius:6px;color:#ff8fa3;font-size:11px;padding:4px 10px;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
-.del-grp-btn:hover{background:rgba(255,77,109,.2)}
-.del-lap-btn{background:rgba(255,77,109,.06);border:1px solid rgba(255,77,109,.18);border-radius:6px;color:#ff8fa3;font-size:11px;padding:4px 8px;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;margin-left:4px}
-.del-lap-btn:hover{background:rgba(255,77,109,.18)}
-.add-grp-box{background:rgba(0,229,160,.04);border:1px solid rgba(0,229,160,.18);border-radius:12px;padding:20px 22px;margin-bottom:16px}
-.add-grp-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--green);margin-bottom:12px}
-.add-grp-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.add-grp-input{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;flex:1;min-width:180px;transition:border-color .2s}
-.add-grp-input:focus{border-color:var(--green)}
-.add-grp-btn{background:linear-gradient(135deg,rgba(0,229,160,.2),rgba(0,229,160,.12));border:1px solid rgba(0,229,160,.35);border-radius:8px;padding:9px 18px;color:var(--green);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
-.add-grp-btn:hover{background:rgba(0,229,160,.25)}
-.routing-box{background:rgba(0,200,255,.03);border:1px solid rgba(0,200,255,.15);border-radius:12px;overflow:hidden;margin-bottom:16px}
-.routing-head{padding:16px 20px;border-bottom:1px solid rgba(0,200,255,.15);display:flex;align-items:center;justify-content:space-between;gap:12px}
-.save-routing-btn{background:linear-gradient(135deg,#0090c8,var(--cyan));border:none;border-radius:8px;padding:8px 18px;color:#040d1a;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .2s}
-.save-routing-btn:hover{opacity:.85}
-.routing-status{font-size:12px;margin-top:8px;border-radius:7px;padding:7px 12px;display:none}
-.routing-status.ok{background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.25);color:var(--green);display:block}
-.routing-status.err{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.25);color:#ff8fa3;display:block}
+.lc-msg-img{max-width:220px;max-height:200px;border-radius:10px;border:1px solid var(--border2);cursor:zoom-in;display:block;transition:opacity .15s}
+.lc-msg-img:hover{opacity:.88}
 </style></head><body>
 
 <div class="sb">
@@ -459,49 +353,21 @@ tr:hover td{background:rgba(13,31,60,.5)}
 
     <div class="sec" id="sec-grup">
       <div class="sec-title">Grup WhatsApp</div>
-      <div class="sec-sub">Kelola grup penerima laporan dan konfigurasi routing per kategori</div>
-
-      <div class="add-grp-box">
-        <div class="add-grp-title">➕ Tambah Grup via Dashboard</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Masukkan Group ID WhatsApp (format: <code style="color:var(--cyan);background:var(--bg3);padding:1px 6px;border-radius:4px">1206xxxxx@g.us</code>). Bisa dilihat dari log bot saat pesan dikirim di grup.</div>
-        <div class="add-grp-row">
-          <input class="add-grp-input" id="grp-id-input" placeholder="1206xxxxxxxxxx@g.us" type="text">
-          <input class="add-grp-input" id="grp-name-input" placeholder="Nama Grup (opsional)" type="text" style="max-width:220px">
-          <button class="add-grp-btn" onclick="addGroup()">➕ Tambah Grup</button>
-        </div>
-        <div id="add-grp-status" class="routing-status"></div>
-      </div>
-
+      <div class="sec-sub">Grup yang terdaftar sebagai penerima notifikasi laporan</div>
       <div class="tc" style="margin-bottom:16px">
-        <div class="tc-head"><div class="tc-head-l"><span class="tc-name">Daftar Grup</span><span class="cnt-badge" id="grp-count">${groups.length} grup</span></div></div>
+        <div class="tc-head"><div class="tc-head-l"><span class="tc-name">Daftar Grup</span><span class="cnt-badge">${groups.length} grup</span></div></div>
         <div class="tbl-wrap"><table>
-          <thead><tr><th>Nama Grup</th><th>Group ID</th><th>Terdaftar</th><th>Status</th><th>Aksi</th></tr></thead>
-          <tbody id="grp-table-body">${groupRows}</tbody>
+          <thead><tr><th>Nama Grup</th><th>Group ID</th><th>Terdaftar</th><th>Status</th></tr></thead>
+          <tbody>${groupRows}</tbody>
         </table></div>
       </div>
-
-      <div class="routing-box">
-        <div class="routing-head">
-          <div>
-            <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--cyan)">🗂️ Routing Laporan per Kategori</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:3px">Atur ke grup mana setiap kategori laporan akan diteruskan. Jika tidak diatur → dikirim ke semua grup.</div>
-          </div>
-          <button class="save-routing-btn" onclick="saveRouting()">💾 Simpan Routing</button>
-        </div>
-        <table style="width:100%">
-          <thead><tr><th style="padding:11px 14px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;background:var(--bg3);border-bottom:1px solid var(--border)">Kategori</th><th style="padding:11px 14px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;background:var(--bg3);border-bottom:1px solid var(--border)">Grup Tujuan</th></tr></thead>
-          <tbody id="routing-tbody">${routingRows}</tbody>
-        </table>
-        <div id="routing-status" class="routing-status" style="margin:10px 14px 14px"></div>
-      </div>
-
       <div class="info-card">
-        <div class="cc-title" style="margin-bottom:10px">📱 Cara Mendaftarkan Grup via Bot</div>
+        <div class="cc-title" style="margin-bottom:10px">📱 Cara Mendaftarkan Grup</div>
         <div style="font-size:13px;color:var(--text2);line-height:2">
           1. Tambahkan bot WhatsApp ke grup yang diinginkan<br>
           2. Ketik <code style="background:var(--bg3);padding:1px 7px;border-radius:4px;color:var(--cyan)">applylaporan</code> di dalam grup tersebut<br>
           3. Bot akan mengkonfirmasi pendaftaran grup<br>
-          4. Atau gunakan form <b>Tambah Grup via Dashboard</b> di atas jika sudah tahu Group ID-nya
+          4. Untuk menghapus, ketik <code style="background:var(--bg3);padding:1px 7px;border-radius:4px;color:var(--red)">removelaporan</code>
         </div>
       </div>
     </div>
@@ -512,8 +378,8 @@ tr:hover td{background:rgba(13,31,60,.5)}
       <div class="guide-grid">
         <div class="info-card"><div style="font-size:26px;margin-bottom:10px">📲</div><div class="cc-title" style="margin-bottom:10px">Bot Commands</div><div style="font-size:13px;color:var(--text2);line-height:2"><code style="color:var(--cyan)">applylaporan</code> — Daftarkan grup<br><code style="color:var(--red)">removelaporan</code> — Hapus grup<br><code style="color:var(--green)">menu</code> / <code style="color:var(--green)">hi</code> — Menu utama bot</div></div>
         <div class="info-card"><div style="font-size:26px;margin-bottom:10px">📋</div><div class="cc-title" style="margin-bottom:10px">Alur Laporan</div><div style="font-size:13px;color:var(--text2);line-height:1.9">1. Pilih menu → Laporan Pengaduan<br>2. Pilih kategori & kelurahan<br>3. Tulis uraian laporan<br>4. Kirim foto bukti<br>5. Bagikan lokasi GPS</div></div>
-        <div class="info-card"><div style="font-size:26px;margin-bottom:10px">💾</div><div class="cc-title" style="margin-bottom:10px">Penyimpanan Data</div><div style="font-size:13px;color:var(--text2);line-height:2"><code style="color:var(--cyan)">data/laporan_archive.json</code> — Arsip laporan<br><code style="color:var(--cyan)">data/laporan_groups.json</code> — Daftar grup<br><code style="color:var(--cyan)">data/group_routing.json</code> — Routing kategori</div></div>
-        <div class="info-card"><div style="font-size:26px;margin-bottom:10px">🗂️</div><div class="cc-title" style="margin-bottom:10px">Kategori Pengaduan</div><div style="font-size:13px;color:var(--text2);line-height:2">🗑️ Sampah Liar<br>⚠️ Gangguan Ketertiban<br>💡 Lampu Jalan Mati<br>🌊 Drainase Tersumbat<br>📋 Administrasi Pelayanan<br>🏚️ Bangunan Liar<br>📌 Lainnya</div></div>
+        <div class="info-card"><div style="font-size:26px;margin-bottom:10px">💾</div><div class="cc-title" style="margin-bottom:10px">Penyimpanan Data</div><div style="font-size:13px;color:var(--text2);line-height:2"><code style="color:var(--cyan)">data/laporan_archive.json</code> — Arsip laporan<br><code style="color:var(--cyan)">data/laporan_groups.json</code> — Daftar grup<br><code style="color:var(--cyan)">data/laporan_counter.json</code> — Nomor urut</div></div>
+        <div class="info-card"><div style="font-size:26px;margin-bottom:10px">🔐</div><div class="cc-title" style="margin-bottom:10px">Keamanan Dashboard</div><div style="font-size:13px;color:var(--text2);line-height:2">Ubah password lewat ENV variable:<br><code style="color:var(--cyan)">ADMIN_USER=namaadmin</code><br><code style="color:var(--cyan)">ADMIN_PASS=passwordbaru node web.js</code></div></div>
       </div>
     </div>
 
@@ -612,8 +478,6 @@ function showDetail(jsonStr){
   } else {
     html+=row('Foto Bukti','<div class="no-img">📷 Foto tidak tersedia untuk laporan ini</div>');
   }
-
-  // ── Form Feedback ke Pelapor ──
   html+='<hr class="detail-divider">';
   html+='<div class="fb-box">'
     +'<div class="fb-title">💬 Kirim Balasan ke Pelapor</div>'
@@ -626,7 +490,6 @@ function showDetail(jsonStr){
     +'<button class="fb-send-btn" data-id="'+l.id+'" data-pelapor="'+esc(l.pelapor||'')+'" data-nama="'+esc(l.namaPelapor||'')+'" onclick="sendFeedback(this.dataset.id,this.dataset.pelapor,this.dataset.nama,this)">📤 Kirim Balasan via WhatsApp</button>'
     +'<div class="fb-status" id="fb-status-'+l.id+'"></div>'
     +'</div>';
-
   document.getElementById('modal-body').innerHTML=html;
   document.getElementById('modal-overlay').style.display='flex';
 }
@@ -709,7 +572,6 @@ evtSource.addEventListener('update', (e) => {
   const newItems = laporan.slice(0, newCount - knownCount);
   knownCount = newCount;
 
-  // Update stat cards
   document.querySelector('#sec-overview .sc-val').textContent = newCount;
   const todayCount = laporan.filter(l=>new Date(l.tanggal).toDateString()===new Date().toDateString()).length;
   document.querySelectorAll('#sec-overview .sc-val')[1].textContent = todayCount;
@@ -717,19 +579,15 @@ evtSource.addEventListener('update', (e) => {
   const monthCount = laporan.filter(l=>{const d=new Date(l.tanggal);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).length;
   document.querySelectorAll('#sec-overview .sc-val')[2].textContent = monthCount;
 
-  // Update row count badge
   document.getElementById('row-count').textContent = newCount;
 
-  // Prepend new rows to main table
   const tbody = document.getElementById('table-body');
   newItems.reverse().forEach(l => {
     tbody.insertAdjacentHTML('afterbegin', buildRow(l));
   });
 
-  // Update recent table in overview
   const overviewTbody = document.querySelector('#sec-overview table tbody');
   if (overviewTbody) {
-    const allRows = Array.from(overviewTbody.querySelectorAll('tr'));
     newItems.reverse().forEach(l => {
       const id='#'+String(l.id||0).padStart(4,'0');
       const jsonEsc=esc(JSON.stringify(l)).replace(/'/g,"\\\\'");
@@ -743,21 +601,16 @@ evtSource.addEventListener('update', (e) => {
         +'</tr>';
       overviewTbody.insertAdjacentHTML('afterbegin', row);
     });
-    // Trim to 5 rows
     Array.from(overviewTbody.querySelectorAll('tr')).slice(5).forEach(r=>r.remove());
   }
 
-  // Toast per laporan baru
   newItems.forEach(l => {
     showToast(esc(l.kategori)+' — '+esc(l.kelurahan)+' oleh '+esc(l.namaPelapor));
   });
 });
 
-evtSource.addEventListener('error', () => {
-  // Reconnect otomatis ditangani browser, tidak perlu action manual
-});
+evtSource.addEventListener('error', () => {});
 
-// ── Export Excel ──────────────────────────────────────────
 function startExport(el) {
   el.classList.add('loading');
   el.textContent = '⏳ Menyiapkan...';
@@ -767,7 +620,6 @@ function startExport(el) {
   }, 4000);
 }
 
-// ── Feedback ke Pelapor ───────────────────────────────────
 function previewFbFoto(input, laporanId) {
   const preview = document.getElementById('fb-preview-' + laporanId);
   if (input.files && input.files[0]) {
@@ -777,7 +629,6 @@ function previewFbFoto(input, laporanId) {
       preview.style.display = 'block';
     };
     reader.readAsDataURL(input.files[0]);
-    // Update label teks
     input.previousElementSibling && (input.parentElement.childNodes[0].textContent = '✅ ' + input.files[0].name);
   }
 }
@@ -846,7 +697,6 @@ function renderSessions(sessions) {
   const el = document.getElementById('lc-sessions');
   document.getElementById('lc-count').textContent = sessions.length;
 
-  // Update unread badge di sidebar
   const totalUnread = sessions.reduce((n,s) => n + (s.status==='active' ? (s.unread||0) : 0), 0);
   const badge = document.getElementById('lc-unread-badge');
   if (totalUnread > 0) { badge.textContent = totalUnread; badge.style.display='inline'; }
@@ -885,7 +735,6 @@ function renderMessages(session) {
   el.innerHTML = session.messages.map(m => {
     let bubbleContent = '';
     if (m.mediaPath) {
-      // Tampilkan gambar + caption kalau ada
       bubbleContent += \`<a href="\${m.mediaPath}" target="_blank" rel="noopener">
         <img src="\${m.mediaPath}" class="lc-msg-img" alt="Foto" loading="lazy">
       </a>\`;
@@ -910,15 +759,12 @@ function openChat(sessionId) {
   const session = lcSessions.find(s => s.id === sessionId);
   if (!session) return;
 
-  // Mark read via API
   fetch('/api/livechat/read', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ sessionId }) });
 
-  // Highlight active
   document.querySelectorAll('.lc-item').forEach(el => {
     el.classList.toggle('active', el.getAttribute('onclick').includes(sessionId));
   });
 
-  // Show chat panel
   document.getElementById('lc-no-chat').style.display = 'none';
   const panel = document.getElementById('lc-active-chat');
   panel.style.display = 'flex';
@@ -934,8 +780,6 @@ function openChat(sessionId) {
   document.getElementById('lc-end-btn').style.display = session.status==='closed' ? 'none' : '';
 
   renderMessages(session);
-
-  // Clear unread locally
   session.unread = 0;
   renderSessions(lcSessions);
 }
@@ -960,12 +804,8 @@ async function sendReply() {
       body: JSON.stringify({ sessionId: lcActiveId, text })
     });
     const json = await res.json();
-    if (json.ok) {
-      input.value = '';
-      // Pesan akan muncul via SSE update berikutnya (< 2 detik)
-    } else {
-      alert('Gagal kirim: ' + (json.error || 'Unknown error'));
-    }
+    if (!json.ok) alert('Gagal kirim: ' + (json.error || 'Unknown error'));
+    else input.value = '';
   } catch(e) {
     alert('Error: ' + e.message);
   } finally {
@@ -989,13 +829,11 @@ async function endSession() {
   } catch(e) { alert('Error: '+e.message); }
 }
 
-// Terima update livechat dari SSE
 evtSource.addEventListener('livechat', (e) => {
   const data = JSON.parse(e.data);
   lcSessions = data.sessions || [];
   renderSessions(lcSessions);
 
-  // Jika ada sesi aktif terbuka, refresh messages-nya
   if (lcActiveId) {
     const current = lcSessions.find(s => s.id === lcActiveId);
     if (current) {
@@ -1005,620 +843,13 @@ evtSource.addEventListener('livechat', (e) => {
       document.getElementById('lc-end-btn').style.display = current.status==='closed' ? 'none' : '';
       const dot = document.getElementById('lc-status-dot');
       dot.className = 'lc-status-dot' + (current.status==='closed'?' closed':'');
-      // Toast jika ada pesan baru dari user
-      if (current.status==='active') {
-        const last = current.messages?.slice(-1)[0];
-        if (last && last.from==='user' && (Date.now()-new Date(last.timestamp).getTime()) < 4000) {
-          // sudah tampil di panel
-        }
-      }
     }
   }
-
-  // Toast untuk sesi baru
-  lcSessions.filter(s=>s.status==='active'&&s.messages?.length===0).forEach(s=>{
-    // already handled
-  });
 });
 
-// ── Grup Management ────────────────────────────────────────
-async function addGroup() {
-  const idInput   = document.getElementById('grp-id-input');
-  const nameInput = document.getElementById('grp-name-input');
-  const status    = document.getElementById('add-grp-status');
-  const groupId   = idInput.value.trim();
-  const groupName = nameInput.value.trim();
-
-  if (!groupId) { idInput.focus(); return; }
-  if (!groupId.endsWith('@g.us')) {
-    status.textContent = '⚠️ Group ID harus diakhiri dengan @g.us';
-    status.className = 'routing-status err';
-    return;
-  }
-
-  status.className = 'routing-status';
-  status.style.display = 'none';
-
-  try {
-    const res = await fetch('/api/group/add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ groupId, groupName: groupName || groupId })
-    });
-    const json = await res.json();
-    if (json.ok) {
-      status.textContent = '✅ Grup berhasil ditambahkan! Halaman akan direfresh...';
-      status.className = 'routing-status ok';
-      idInput.value = '';
-      nameInput.value = '';
-      setTimeout(() => location.reload(), 1500);
-    } else {
-      status.textContent = '❌ ' + (json.error || 'Gagal menambahkan grup');
-      status.className = 'routing-status err';
-    }
-  } catch(e) {
-    status.textContent = '❌ Error: ' + e.message;
-    status.className = 'routing-status err';
-  }
-}
-
-async function deleteGroup(groupId, groupName) {
-  if (!confirm('Hapus grup "' + groupName + '" dari daftar penerima laporan?')) return;
-  try {
-    const res = await fetch('/api/group/delete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ groupId })
-    });
-    const json = await res.json();
-    if (json.ok) {
-      location.reload();
-    } else {
-      alert('Gagal hapus grup: ' + (json.error || ''));
-    }
-  } catch(e) { alert('Error: ' + e.message); }
-}
-
-// ── Delete Laporan ─────────────────────────────────────────
-async function deleteLaporanRow(laporanId, btn) {
-  if (!confirm('Hapus laporan #' + String(laporanId).padStart(4,'0') + '? Tindakan ini tidak bisa dibatalkan.')) return;
-  try {
-    const res = await fetch('/api/laporan/delete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: laporanId })
-    });
-    const json = await res.json();
-    if (json.ok) {
-      const row = btn.closest('tr');
-      row.style.opacity = '0';
-      row.style.transition = 'opacity .3s';
-      setTimeout(() => { row.remove(); const cnt=document.getElementById('row-count'); if(cnt)cnt.textContent=parseInt(cnt.textContent||'0')-1; }, 300);
-    } else {
-      alert('Gagal hapus laporan: ' + (json.error || ''));
-    }
-  } catch(e) { alert('Error: ' + e.message); }
-}
-
-// ── Routing ────────────────────────────────────────────────
-async function saveRouting() {
-  const status = document.getElementById('routing-status');
-  const categories = ${JSON.stringify(KATEGORI_PENGADUAN.map(k=>k.label))};
-  const routing = {};
-  categories.forEach(kat => {
-    const sel = document.getElementById('rt-' + kat);
-    if (sel && sel.value) routing[kat] = sel.value;
-  });
-  status.className = 'routing-status';
-  status.style.display = 'none';
-  try {
-    const res = await fetch('/api/group/routing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ routing })
-    });
-    const json = await res.json();
-    if (json.ok) {
-      status.textContent = '✅ Routing berhasil disimpan!';
-      status.className = 'routing-status ok';
-      setTimeout(() => { status.className='routing-status'; status.style.display='none'; }, 3000);
-    } else {
-      status.textContent = '❌ Gagal: ' + (json.error || '');
-      status.className = 'routing-status err';
-    }
-  } catch(e) {
-    status.textContent = '❌ Error: ' + e.message;
-    status.className = 'routing-status err';
-  }
-}
+evtSource.addEventListener('livechat_new', (e) => {
+  const data = JSON.parse(e.data);
+  showToast(esc(data.name)+': '+esc((data.text||'').substring(0,50)), '💬');
+});
 <\/script></body></html>`;
 };
-
-// ─── SSE CLIENTS & FILE WATCHER ───────────────────────────
-const sseClients = new Set();
-
-const broadcastUpdate = () => {
-  const data = JSON.stringify({ laporan: getLaporan() });
-  for (const client of sseClients) {
-    try { client.write(`event: update\ndata: ${data}\n\n`); }
-    catch { sseClients.delete(client); }
-  }
-};
-
-const broadcastLivechat = () => {
-  const data = JSON.stringify({ sessions: getLivechatSessions() });
-  for (const client of sseClients) {
-    try { client.write(`event: livechat\ndata: ${data}\n\n`); }
-    catch { sseClients.delete(client); }
-  }
-};
-
-const broadcastLivechatNew = (name, text) => {
-  const data = JSON.stringify({ name, text });
-  for (const client of sseClients) {
-    try { client.write(`event: livechat_new\ndata: ${data}\n\n`); }
-    catch { sseClients.delete(client); }
-  }
-};
-
-const watchFile = path.join(__dirname, CONFIG.DATA_DIR, 'laporan_archive.json');
-let watchDebounce = null;
-const startWatcher = () => {
-  if (!fs.existsSync(path.join(__dirname, CONFIG.DATA_DIR))) {
-    fs.mkdirSync(path.join(__dirname, CONFIG.DATA_DIR), { recursive: true });
-  }
-  if (!fs.existsSync(watchFile)) {
-    fs.writeFileSync(watchFile, JSON.stringify({ laporan: [] }), 'utf8');
-  }
-  fs.watch(watchFile, () => {
-    clearTimeout(watchDebounce);
-    watchDebounce = setTimeout(broadcastUpdate, 300);
-  });
-
-  // Watch livechat sessions file
-  const lcFile = path.join(__dirname, CONFIG.DATA_DIR, 'livechat_sessions.json');
-  if (!fs.existsSync(lcFile)) fs.writeFileSync(lcFile, JSON.stringify({ sessions: [] }), 'utf8');
-  let lcDebounce = null;
-  fs.watch(lcFile, () => {
-    clearTimeout(lcDebounce);
-    lcDebounce = setTimeout(broadcastLivechat, 150); // 150ms — sangat cepat
-  });
-  console.log(`  👁️  Memantau: ${watchFile}`);
-};
-
-const server = http.createServer(async (req, res) => {
-  const url_  = new URL(req.url, 'http://localhost');
-  const path_ = url_.pathname;
-  const cookies = parseCookies(req);
-  const authed  = validateSession(cookies.session);
-
-  const send = (code, body, type='text/html; charset=utf-8', extra={}) => {
-    res.writeHead(code, { 'Content-Type': type, ...extra });
-    res.end(body);
-  };
-
-  if (path_ === '/login' && req.method === 'GET') return send(200, pageLogin());
-  if (path_ === '/login' && req.method === 'POST') {
-    const body = await parseBody(req);
-    if (body.username === CONFIG.ADMIN_USERNAME && body.password === CONFIG.ADMIN_PASSWORD) {
-      const token = createSession();
-      return send(302, '', 'text/plain', {
-        'Set-Cookie': `session=${token}; HttpOnly; Path=/; Max-Age=${CONFIG.SESSION_EXPIRE_HOURS*3600}`,
-        'Location': '/'
-      });
-    }
-    return send(200, pageLogin('Username atau password salah!'));
-  }
-  if (path_ === '/logout') {
-    if (cookies.session) sessions.delete(cookies.session);
-    return send(302, '', 'text/plain', { 'Set-Cookie': 'session=; HttpOnly; Path=/; Max-Age=0', 'Location': '/login' });
-  }
-  if (!authed) return send(302, '', 'text/plain', { 'Location': '/login' });
-
-  // ── SSE endpoint ──
-  if (path_ === '/sse') {
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-      'X-Accel-Buffering': 'no',
-    });
-    res.write(': connected\n\n');
-    sseClients.add(res);
-    const init = JSON.stringify({ laporan: getLaporan() });
-    res.write(`event: update\ndata: ${init}\n\n`);
-    const lcInit = JSON.stringify({ sessions: getLivechatSessions() });
-    res.write(`event: livechat\ndata: ${lcInit}\n\n`);
-    const heartbeat = setInterval(() => {
-      try { res.write(': ping\n\n'); }
-      catch { clearInterval(heartbeat); sseClients.delete(res); }
-    }, 25000);
-    req.on('close', () => {
-      clearInterval(heartbeat);
-      sseClients.delete(res);
-    });
-    return;
-  }
-
-  if (path_ === '/') return send(200, pageDashboard(getLaporan(), getGroups(), getGroupRouting()));
-  if (path_ === '/api/laporan') return send(200, JSON.stringify(getLaporan()), 'application/json');
-
-  // ── API: Tambah Grup ──
-  if (path_ === '/api/group/add' && req.method === 'POST') {
-    try {
-      const body = await parseJSONBody(req);
-      const { groupId, groupName } = body;
-      if (!groupId || !groupId.endsWith('@g.us')) {
-        return send(400, JSON.stringify({ ok: false, error: 'Group ID tidak valid' }), 'application/json');
-      }
-      const added = addLaporanGroup(groupId, groupName || groupId);
-      if (!added) {
-        return send(200, JSON.stringify({ ok: false, error: 'Grup sudah terdaftar' }), 'application/json');
-      }
-      return send(200, JSON.stringify({ ok: true }), 'application/json');
-    } catch (err) {
-      return send(500, JSON.stringify({ ok: false, error: err.message }), 'application/json');
-    }
-  }
-
-  // ── API: Hapus Grup ──
-  if (path_ === '/api/group/delete' && req.method === 'POST') {
-    try {
-      const body = await parseJSONBody(req);
-      const { groupId } = body;
-      if (!groupId) return send(400, JSON.stringify({ ok: false, error: 'groupId diperlukan' }), 'application/json');
-      const removed = removeLaporanGroup(groupId);
-      if (!removed) return send(404, JSON.stringify({ ok: false, error: 'Grup tidak ditemukan' }), 'application/json');
-      // Hapus juga dari routing jika ada
-      const routing = getGroupRouting();
-      let changed = false;
-      for (const [kat, gid] of Object.entries(routing)) {
-        if (gid === groupId) { delete routing[kat]; changed = true; }
-      }
-      if (changed) setGroupRouting(routing);
-      return send(200, JSON.stringify({ ok: true }), 'application/json');
-    } catch (err) {
-      return send(500, JSON.stringify({ ok: false, error: err.message }), 'application/json');
-    }
-  }
-
-  // ── API: Simpan Routing ──
-  if (path_ === '/api/group/routing' && req.method === 'POST') {
-    try {
-      const body = await parseJSONBody(req);
-      const { routing } = body;
-      if (typeof routing !== 'object' || routing === null) {
-        return send(400, JSON.stringify({ ok: false, error: 'Data routing tidak valid' }), 'application/json');
-      }
-      setGroupRouting(routing);
-      return send(200, JSON.stringify({ ok: true }), 'application/json');
-    } catch (err) {
-      return send(500, JSON.stringify({ ok: false, error: err.message }), 'application/json');
-    }
-  }
-
-  // ── API: Hapus Laporan ──
-  if (path_ === '/api/laporan/delete' && req.method === 'POST') {
-    try {
-      const body = await parseJSONBody(req);
-      const { id } = body;
-      if (!id) return send(400, JSON.stringify({ ok: false, error: 'id diperlukan' }), 'application/json');
-      const deleted = deleteLaporan(id);
-      if (!deleted) return send(404, JSON.stringify({ ok: false, error: 'Laporan tidak ditemukan' }), 'application/json');
-      return send(200, JSON.stringify({ ok: true }), 'application/json');
-    } catch (err) {
-      return send(500, JSON.stringify({ ok: false, error: err.message }), 'application/json');
-    }
-  }
-
-  // ── API: Kirim Feedback ke Pelapor ──
-  if (path_ === '/api/feedback' && req.method === 'POST') {
-    try {
-      const body = await parseJSONBody(req);
-      const { laporanId, pelapor, namaPelapor, pesan, foto_base64, foto_mime } = body;
-
-      if (!pelapor || !pesan?.trim()) {
-        return send(400, JSON.stringify({ ok: false, error: 'Data tidak lengkap' }), 'application/json');
-      }
-
-      let fotoPath = null;
-      if (foto_base64) {
-        const ext = (foto_mime || 'image/jpeg').split('/')[1]?.replace('jpeg','jpg') || 'jpg';
-        const fname = `feedback_${Date.now()}.${ext}`;
-        const fpath = path.join(FOTO_FEEDBACK_DIR, fname);
-        fs.writeFileSync(fpath, Buffer.from(foto_base64, 'base64'));
-        fotoPath = fpath;
-      }
-
-      queueFeedback({ laporanId, pelapor, namaPelapor, pesan: pesan.trim(), fotoPath });
-
-      return send(200, JSON.stringify({ ok: true }), 'application/json');
-    } catch (err) {
-      return send(500, JSON.stringify({ ok: false, error: err.message }), 'application/json');
-    }
-  }
-
-  // ── API: LiveChat – Get sessions ──
-  if (path_ === '/api/livechat/sessions') {
-    return send(200, JSON.stringify(getLivechatSessions()), 'application/json');
-  }
-
-  // ── API: LiveChat – Admin reply ──
-  if (path_ === '/api/livechat/reply' && req.method === 'POST') {
-    try {
-      const body = await parseJSONBody(req);
-      const { sessionId, text } = body;
-      if (!sessionId || !text?.trim()) {
-        return send(400, JSON.stringify({ ok: false, error: 'Data tidak lengkap' }), 'application/json');
-      }
-      const sessions = getLivechatSessions();
-      const session  = sessions.find(s => s.id === sessionId);
-      if (!session) return send(404, JSON.stringify({ ok: false, error: 'Sesi tidak ditemukan' }), 'application/json');
-      if (session.status === 'closed') return send(400, JSON.stringify({ ok: false, error: 'Sesi sudah ditutup' }), 'application/json');
-
-      // Simpan ke riwayat chat
-      addLivechatMessage(session.jid, 'admin', text.trim());
-
-      // Antrekan ke bot worker — near-instant (< 2 detik)
-      queueLivechatReply({ jid: session.jid, text: text.trim() });
-
-      return send(200, JSON.stringify({ ok: true }), 'application/json');
-    } catch (err) {
-      return send(500, JSON.stringify({ ok: false, error: err.message }), 'application/json');
-    }
-  }
-
-  // ── API: LiveChat – Close session ──
-  if (path_ === '/api/livechat/close' && req.method === 'POST') {
-    try {
-      const body = await parseJSONBody(req);
-      const { sessionId } = body;
-      if (!sessionId) return send(400, JSON.stringify({ ok: false, error: 'sessionId diperlukan' }), 'application/json');
-
-      const session = getLivechatSessions().find(s => s.id === sessionId);
-      if (!session) return send(404, JSON.stringify({ ok: false, error: 'Sesi tidak ditemukan' }), 'application/json');
-
-      closeLivechatSessionById(sessionId);
-
-      // Kirim notifikasi ke user via bot worker
-      queueLivechatReply({
-        jid: session.jid,
-        text: `✅ Sesi LiveChat Anda telah ditutup oleh admin.\n\nTerima kasih sudah menghubungi *Kecamatan Medan Johor*! 🙏\n\nKetik *menu* untuk kembali ke menu utama.`
-      });
-
-      return send(200, JSON.stringify({ ok: true }), 'application/json');
-    } catch (err) {
-      return send(500, JSON.stringify({ ok: false, error: err.message }), 'application/json');
-    }
-  }
-
-  // ── API: LiveChat – Mark read ──
-  if (path_ === '/api/livechat/read' && req.method === 'POST') {
-    try {
-      const body = await parseJSONBody(req);
-      markLivechatRead(body.sessionId);
-      return send(200, JSON.stringify({ ok: true }), 'application/json');
-    } catch { return send(500, JSON.stringify({ ok: false }), 'application/json'); }
-  }
-
-  // ── Export Excel ──
-  if (path_ === '/export/excel') {
-    const laporanData = getLaporan();
-    const wb = new ExcelJS.Workbook();
-    wb.creator = 'Hallo Johor Bot';
-    wb.created = new Date();
-
-    const ws = wb.addWorksheet('Laporan Pengaduan', {
-      pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true }
-    });
-
-    // ── Header row ──
-    ws.columns = [
-      { key: 'no',        width: 12  },
-      { key: 'tanggal',   width: 24  },
-      { key: 'pelapor',   width: 22  },
-      { key: 'nowa',      width: 18  },
-      { key: 'kategori',  width: 22  },
-      { key: 'kelurahan', width: 20  },
-      { key: 'uraian',    width: 42  },
-      { key: 'alamat',    width: 42  },
-      { key: 'maps',      width: 38  },
-      { key: 'foto',      width: 22  },
-    ];
-
-    const HEADER_LABELS = [
-      'No. Laporan', 'Tanggal', 'Pelapor', 'No. WA',
-      'Kategori', 'Kelurahan', 'Uraian', 'Alamat', 'Google Maps', 'Foto Bukti'
-    ];
-
-    const HEADER_COLORS = [
-      '1E3A5F','1E3A5F','1E3A5F','1E3A5F',
-      '2D1B69','1A4731','1A3A4F','1A3A4F','1A3A4F','2D3748'
-    ];
-
-    const headerRow = ws.addRow(HEADER_LABELS);
-    headerRow.height = 32;
-    headerRow.eachCell((cell, colNum) => {
-      cell.fill   = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF' + HEADER_COLORS[colNum-1] } };
-      cell.font   = { bold:true, color:{ argb:'FFFFFFFF' }, size:11, name:'Arial' };
-      cell.alignment = { vertical:'middle', horizontal:'center', wrapText:true };
-      cell.border = {
-        top:   { style:'thin', color:{ argb:'FF2A4A7F' } },
-        left:  { style:'thin', color:{ argb:'FF2A4A7F' } },
-        bottom:{ style:'thin', color:{ argb:'FF2A4A7F' } },
-        right: { style:'thin', color:{ argb:'FF2A4A7F' } },
-      };
-    });
-
-    // Freeze header row
-    ws.views = [{ state:'frozen', ySplit:1, activeCell:'A2' }];
-
-    // ── Data rows ──
-    const IMG_ROW_HEIGHT = 110;
-    const FOTO_COL = 10; // column J (1-indexed)
-
-    for (let i = 0; i < laporanData.length; i++) {
-      const l = laporanData[i];
-      const hasFoto = !!l.fotoPath;
-      const lat = l.koordinat?.lat || l.koordinat?.latitude || '';
-      const lon = l.koordinat?.lon || l.koordinat?.longitude || '';
-      const mapsUrl = lat && lon ? `https://maps.google.com/?q=${lat},${lon}` : '';
-      const tanggalFormatted = l.tanggal
-        ? new Date(l.tanggal).toLocaleString('id-ID', { timeZone:'Asia/Jakarta', day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })
-        : '-';
-
-      const rowValues = [
-        `#${String(l.id||0).padStart(4,'0')}`,
-        tanggalFormatted,
-        l.namaPelapor || '-',
-        (l.pelapor||'').replace('@s.whatsapp.net','') || '-',
-        l.kategori || '-',
-        l.kelurahan || '-',
-        l.isi || '-',
-        l.alamat || '-',
-        mapsUrl,
-        hasFoto ? '' : '(Tidak ada foto)',
-      ];
-
-      const row = ws.addRow(rowValues);
-      row.height = hasFoto ? IMG_ROW_HEIGHT : 20;
-
-      // Maps URL as hyperlink
-      if (mapsUrl) {
-        const mapsCell = row.getCell(9);
-        mapsCell.value = { text: 'Buka Google Maps', hyperlink: mapsUrl };
-        mapsCell.font  = { color:{ argb:'FF0070C0' }, underline:true, name:'Arial', size:10 };
-      }
-
-      // Zebra stripe
-      const bgColor = i % 2 === 0 ? 'FFFFFFFF' : 'FFF0F4FA';
-      row.eachCell({ includeEmpty:true }, (cell, colNum) => {
-        if (colNum === 9 && mapsUrl) return; // skip hyperlink cell
-        cell.font      = cell.font || {};
-        cell.font.name = 'Arial';
-        cell.font.size = 10;
-        cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb: bgColor } };
-        cell.alignment = { vertical:'middle', wrapText:true, ...(colNum===1 ? {horizontal:'center'} : {}) };
-        cell.border = {
-          top:   { style:'hair', color:{ argb:'FFD0D8E4' } },
-          left:  { style:'hair', color:{ argb:'FFD0D8E4' } },
-          bottom:{ style:'hair', color:{ argb:'FFD0D8E4' } },
-          right: { style:'hair', color:{ argb:'FFD0D8E4' } },
-        };
-      });
-
-      // ── Embed foto ──
-      if (hasFoto) {
-        const fotoFilename = path.basename(l.fotoPath);
-        const fotoFullPath = path.join(__dirname, CONFIG.DATA_DIR, 'foto', fotoFilename);
-        if (fs.existsSync(fotoFullPath)) {
-          try {
-            const ext = fotoFilename.split('.').pop().toLowerCase();
-            const imageId = wb.addImage({
-              filename: fotoFullPath,
-              extension: ext === 'png' ? 'png' : 'jpeg',
-            });
-            const excelRow = i + 2; // +1 header, +1 because 1-indexed
-            ws.addImage(imageId, {
-              tl: { col: FOTO_COL - 1, row: excelRow - 1 },       // top-left (0-indexed)
-              br: { col: FOTO_COL,     row: excelRow },            // bottom-right (0-indexed)
-              editAs: 'oneCell',
-            });
-          } catch (imgErr) {
-            row.getCell(FOTO_COL).value = '(Foto gagal dimuat)';
-          }
-        } else {
-          row.getCell(FOTO_COL).value = '(File foto tidak ditemukan)';
-        }
-      }
-    }
-
-    // ── Summary sheet ──
-    const ws2 = wb.addWorksheet('Ringkasan');
-    ws2.columns = [
-      { key:'label', width:30 },
-      { key:'value', width:20 },
-    ];
-
-    const nowID = new Date().toLocaleString('id-ID', { timeZone:'Asia/Jakarta', dateStyle:'full', timeStyle:'short' });
-    const summaryData = [
-      ['RINGKASAN LAPORAN HALLO JOHOR', ''],
-      ['Diekspor pada', nowID],
-      ['', ''],
-      ['Total Laporan', laporanData.length],
-    ];
-
-    // Kategori count
-    const katCount = {};
-    laporanData.forEach(l => { katCount[l.kategori||'Lainnya'] = (katCount[l.kategori||'Lainnya']||0)+1; });
-    summaryData.push(['', '']);
-    summaryData.push(['REKAPITULASI PER KATEGORI', '']);
-    Object.entries(katCount).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => summaryData.push([k, v]));
-
-    const kelCount = {};
-    laporanData.forEach(l => { kelCount[l.kelurahan||'Lainnya'] = (kelCount[l.kelurahan||'Lainnya']||0)+1; });
-    summaryData.push(['', '']);
-    summaryData.push(['REKAPITULASI PER KELURAHAN', '']);
-    Object.entries(kelCount).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => summaryData.push([k, v]));
-
-    summaryData.forEach((rowData, idx) => {
-      const r = ws2.addRow(rowData);
-      r.getCell(1).font = { name:'Arial', size: idx===0||rowData[0].startsWith('REKAP') ? 12 : 10, bold: idx===0||rowData[0].startsWith('REKAP') };
-      if (typeof rowData[1] === 'number') {
-        r.getCell(2).font   = { name:'Arial', size:10, bold:true, color:{argb:'FF1A4731'} };
-        r.getCell(2).alignment = { horizontal:'center' };
-      }
-    });
-
-    // ── Send file ──
-    const filename = `Laporan_HalloJohor_${new Date().toISOString().slice(0,10)}.xlsx`;
-    const buffer = await wb.xlsx.writeBuffer();
-    res.writeHead(200, {
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'Content-Length': buffer.length,
-    });
-    return res.end(Buffer.from(buffer));
-  }
-
-  // ── Serve foto bukti laporan ──
-  if (path_.startsWith('/foto/')) {
-    const filename = path_.replace('/foto/', '').replace(/[^a-zA-Z0-9._-]/g, '');
-    if (!filename) return send(400, 'Bad Request', 'text/plain');
-    const fotoFile = path.join(__dirname, CONFIG.DATA_DIR, 'foto', filename);
-    if (!fs.existsSync(fotoFile)) return send(404, 'Foto tidak ditemukan', 'text/plain');
-    const ext = filename.split('.').pop().toLowerCase();
-    const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-    const fileBuffer = fs.readFileSync(fotoFile);
-    res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, max-age=86400' });
-    return res.end(fileBuffer);
-  }
-
-  // ── Serve foto livechat ──
-  if (path_.startsWith('/foto-livechat/')) {
-    const filename = path_.replace('/foto-livechat/', '').replace(/[^a-zA-Z0-9._-]/g, '');
-    if (!filename) return send(400, 'Bad Request', 'text/plain');
-    const fotoFile = path.join(__dirname, CONFIG.DATA_DIR, 'foto_livechat', filename);
-    if (!fs.existsSync(fotoFile)) return send(404, 'Foto tidak ditemukan', 'text/plain');
-    const ext = filename.split('.').pop().toLowerCase();
-    const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-    const fileBuffer = fs.readFileSync(fotoFile);
-    res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, max-age=86400' });
-    return res.end(fileBuffer);
-  }
-
-  return send(404, '404 Not Found', 'text/plain');
-});
-
-server.listen(CONFIG.PORT, () => {
-  console.log(`\n╔══════════════════════════════════════════╗`);
-  console.log(`║  🌐  Dashboard Hallo Johor               ║`);
-  console.log(`║  ✅  Berjalan di http://localhost:${CONFIG.PORT}   ║`);
-  console.log(`║  👤  Username : ${CONFIG.ADMIN_USERNAME.padEnd(24)}║`);
-  console.log(`║  🔑  Password : ${CONFIG.ADMIN_PASSWORD.padEnd(24)}║`);
-  console.log(`║  📡  SSE      : Real-time aktif          ║`);
-  console.log(`╚══════════════════════════════════════════╝\n`);
-  console.log(`  Ubah password:`);
-  console.log(`  ADMIN_USER=admin ADMIN_PASS=passwordbaru node web.js\n`);
-  startWatcher();
-});

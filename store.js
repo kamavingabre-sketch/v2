@@ -236,3 +236,31 @@ export const markLivechatReplyDone = (id, status = 'sent') => {
     writeJSON('livechat_replies.json', data);
   }
 };
+
+// ══════════════════════════════════════════════
+//   GROUP ROUTING (kategori → group ID)
+// ══════════════════════════════════════════════
+
+// Format: { "Sampah Liar": "120xxx@g.us", ... }
+// Kategori yang tidak ada di routing → forward ke semua grup
+export const getGroupRouting = () => {
+  const data = readJSON('group_routing.json');
+  return data.routing || {};
+};
+
+export const setGroupRouting = (routing) => {
+  writeJSON('group_routing.json', { routing });
+};
+
+// ── Delete Laporan ────────────────────────────
+export const deleteLaporan = (id) => {
+  const data = readJSON('laporan_archive.json');
+  if (!data.laporan) return false;
+  const before = data.laporan.length;
+  data.laporan = data.laporan.filter(l => String(l.id) !== String(id));
+  if (data.laporan.length < before) {
+    writeJSON('laporan_archive.json', data);
+    return true;
+  }
+  return false;
+};
