@@ -650,8 +650,8 @@ textarea.kg-input{resize:vertical;min-height:72px}
 </div>
 
 <script>
-const sections=['overview','laporan','grup','livechat','panduan'];
-const titles={overview:'Overview',laporan:'Semua Laporan',grup:'Grup WhatsApp',livechat:'LiveChat Admin',panduan:'Panduan'};
+const sections=['overview','laporan','grup','livechat','kegiatan','panduan'];
+const titles={overview:'Overview',laporan:'Semua Laporan',grup:'Grup WhatsApp',livechat:'LiveChat Admin',kegiatan:'Kegiatan Kecamatan',panduan:'Panduan'};
 function showSec(id,el){
   sections.forEach(s=>document.getElementById('sec-'+s).classList.toggle('on',s===id));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
