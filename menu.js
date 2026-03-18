@@ -364,35 +364,8 @@ Lengkapi seluruh dokumen berikut:
 ${FOOTER_PERSYARATAN}`,
 };
 
-export const MENU_KEGIATAN = `🎪 *INFORMASI KEGIATAN KECAMATAN*
-━━━━━━━━━━━━━━━━━━━━━━━
-
-Kegiatan yang sedang/akan dilaksanakan:
-
-🛒 *Pasar Murah*
-   Penyediaan bahan pokok harga terjangkau
-   
-🤝 *Gotong Royong*
-   Kegiatan kebersihan lingkungan bersama
-   
-🏥 *Pelayanan Keliling*
-   Pelayanan administrasi langsung ke warga
-   
-📢 *Sosialisasi Program Pemerintah*
-   Info program bantuan & kebijakan terkini
-   
-🕌 *Safari Jumat / Kegiatan Keagamaan*
-   Kegiatan keagamaan lintas masjid
-
-━━━━━━━━━━━━━━━━━━━━━━━
-📞 Untuk info jadwal terkini, hubungi:
-*Kantor Kecamatan Medan Johor*
-📱 0813-6777-2047
-
-🌐 medanjohor.pemkomedan.go.id
-🏙️ *#MEDANUNTUKSEMUA*
-
-Ketik *0* untuk kembali ke menu`;
+// MENU_KEGIATAN sekarang dibuild secara dinamis via buildKegiatanMenu() di store.js
+// agar admin dapat mengelola kegiatan lewat dashboard web.
 
 export const MENU_PBB = `💰 *INFORMASI PAJAK PBB*
 ━━━━━━━━━━━━━━━━━━━━━━━

@@ -18,12 +18,13 @@ import {
   getLaporanGroups, addLaporanGroup, removeLaporanGroup,
   getNextLaporanId, saveLaporan,
   getGroupRouting,
-  getLivechatByJid, startLivechatSession, addLivechatMessage, closeLivechatSession
+  getLivechatByJid, startLivechatSession, addLivechatMessage, closeLivechatSession,
+  buildKegiatanMenu
 } from './store.js';
 import {
   MENU_UTAMA, MENU_IMAGE_URL,
   MENU_PERSYARATAN, PERSYARATAN,
-  MENU_KEGIATAN, MENU_PBB, MENU_KONTAK,
+  MENU_PBB, MENU_KONTAK,
   MENU_FORMULIR, FORMULIR_LINKS,
   MENU_PROGRAM, MENU_PARIWISATA, WISATA,
   KATEGORI_PENGADUAN, KELURAHAN_LIST,
@@ -214,7 +215,7 @@ export const handleMessage = async (sock, msg) => {
       break;
 
     case '3':
-      await sendText(sock, senderJid, MENU_KEGIATAN);
+      await sendText(sock, senderJid, buildKegiatanMenu());
       logger.send(senderJid, 'Menu Kegiatan');
       break;
 

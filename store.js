@@ -252,6 +252,71 @@ export const setGroupRouting = (routing) => {
   writeJSON('group_routing.json', { routing });
 };
 
+// ══════════════════════════════════════════════
+//   KEGIATAN KECAMATAN
+// ══════════════════════════════════════════════
+
+export const getKegiatan = () => {
+  const data = readJSON('kegiatan.json');
+  return (data.kegiatan || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+};
+
+export const addKegiatan = (item) => {
+  const data = readJSON('kegiatan.json');
+  if (!data.kegiatan) data.kegiatan = [];
+  const entry = {
+    id: `kg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: new Date().toISOString(),
+    nama: item.nama || '',
+    deskripsi: item.deskripsi || '',
+    tempat: item.tempat || '',
+    tanggal: item.tanggal || '',
+  };
+  data.kegiatan.unshift(entry);
+  writeJSON('kegiatan.json', data);
+  return entry;
+};
+
+export const deleteKegiatan = (id) => {
+  const data = readJSON('kegiatan.json');
+  if (!data.kegiatan) return false;
+  const before = data.kegiatan.length;
+  data.kegiatan = data.kegiatan.filter(k => k.id !== id);
+  if (data.kegiatan.length < before) {
+    writeJSON('kegiatan.json', data);
+    return true;
+  }
+  return false;
+};
+
+export const buildKegiatanMenu = () => {
+  const list = getKegiatan();
+  let text = `🎪 *INFORMASI KEGIATAN KECAMATAN*\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+  if (!list.length) {
+    text += `📭 *Saat ini tidak ada informasi kegiatan yang tersedia.*\n\n`;
+    text += `Pantau terus layanan Hallo Johor untuk info kegiatan terbaru dari Kecamatan Medan Johor!\n`;
+  } else {
+    text += `Kegiatan yang sedang/akan dilaksanakan:\n\n`;
+    list.forEach((k, i) => {
+      text += `${i + 1}. 📌 *${k.nama}*\n`;
+      if (k.tanggal) text += `   📅 ${k.tanggal}\n`;
+      if (k.tempat)  text += `   📍 ${k.tempat}\n`;
+      if (k.deskripsi) text += `   📝 ${k.deskripsi}\n`;
+      text += `\n`;
+    });
+  }
+
+  text += `━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `📞 Info lebih lanjut:\n`;
+  text += `*Kantor Kecamatan Medan Johor*\n`;
+  text += `📱 0813-6777-2047\n\n`;
+  text += `🏙️ *#MEDANUNTUKSEMUA*\n`;
+  text += `Ketik *0* untuk kembali ke menu`;
+  return text;
+};
+
 // ── Delete Laporan ────────────────────────────
 export const deleteLaporan = (id) => {
   const data = readJSON('laporan_archive.json');

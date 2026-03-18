@@ -10,7 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
-import { queueFeedback, getLivechatSessions, addLivechatMessage, closeLivechatSessionById, markLivechatRead, queueLivechatReply, addLaporanGroup, removeLaporanGroup, getGroupRouting, setGroupRouting, deleteLaporan } from './store.js';
+import { queueFeedback, getLivechatSessions, addLivechatMessage, closeLivechatSessionById, markLivechatRead, queueLivechatReply, addLaporanGroup, removeLaporanGroup, getGroupRouting, setGroupRouting, deleteLaporan, getKegiatan, addKegiatan, deleteKegiatan } from './store.js';
 import { KATEGORI_PENGADUAN } from './menu.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -133,7 +133,7 @@ input:focus{border-color:#0090c8;box-shadow:0 0 0 3px rgba(0,200,255,.1)}
   <p class="foot">Kecamatan Medan Johor — Sistem Pengaduan Digital</p>
 </div></body></html>`;
 
-const pageDashboard = (laporan, groups, routing = {}) => {
+const pageDashboard = (laporan, groups, routing = {}, kegiatan = []) => {
   const total = laporan.length;
   const now = new Date();
   const today = laporan.filter(l => new Date(l.tanggal).toDateString() === now.toDateString()).length;
@@ -214,6 +214,21 @@ const pageDashboard = (laporan, groups, routing = {}) => {
       <td class="fz12 text-muted2">${fmtDate(l.tanggal)}</td>
       <td><button class="det-btn" onclick='showDetail(${JSON.stringify(JSON.stringify(l))})'>Detail</button></td>
     </tr>`).join('');
+
+  const kegiatanCards = kegiatan.length ? kegiatan.map(k => `
+    <div class="kg-card" id="kgcard-${esc(k.id)}">
+      <div class="kg-card-ico">📌</div>
+      <div class="kg-card-body">
+        <div class="kg-card-name">${esc(k.nama)}</div>
+        <div class="kg-card-meta">
+          ${k.tanggal ? `<span class="kg-chip">📅 ${esc(k.tanggal)}</span>` : ''}
+          ${k.tempat  ? `<span class="kg-chip">📍 ${esc(k.tempat)}</span>`  : ''}
+        </div>
+        ${k.deskripsi ? `<div class="kg-card-desc">${esc(k.deskripsi)}</div>` : ''}
+      </div>
+      <button class="kg-del-btn" onclick="deleteKegiatan('${esc(k.id)}',this)">🗑️ Hapus</button>
+    </div>`).join('') :
+    `<div class="kg-empty"><div class="ico">📭</div>Belum ada kegiatan. Tambahkan melalui form di atas.</div>`;
 
   return `<!DOCTYPE html>
 <html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -382,6 +397,31 @@ tr:hover td{background:rgba(13,31,60,.5)}
 .routing-status{font-size:12px;margin-top:8px;border-radius:7px;padding:7px 12px;display:none}
 .routing-status.ok{background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.25);color:var(--green);display:block}
 .routing-status.err{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.25);color:#ff8fa3;display:block}
+/* ── Kegiatan ── */
+.kg-form{background:var(--card);border:1px solid var(--border);border-radius:15px;padding:22px 24px;margin-bottom:18px}
+.kg-form-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--cyan);margin-bottom:14px}
+.kg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.kg-full{grid-column:1/-1}
+.kg-label{display:block;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+.kg-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .2s}
+.kg-input:focus{border-color:var(--cyan2)}
+textarea.kg-input{resize:vertical;min-height:72px}
+.kg-add-btn{background:linear-gradient(135deg,#0090c8,var(--cyan));border:none;border-radius:8px;padding:9px 20px;color:#040d1a;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:4px}
+.kg-add-btn:hover{opacity:.85}
+.kg-status{font-size:12px;margin-top:10px;border-radius:7px;padding:7px 12px;display:none}
+.kg-status.ok{background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.25);color:var(--green);display:block}
+.kg-status.err{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.25);color:#ff8fa3;display:block}
+.kg-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:10px;display:flex;align-items:flex-start;gap:14px;animation:fi .3s ease both}
+.kg-card-ico{font-size:26px;flex-shrink:0;margin-top:2px}
+.kg-card-body{flex:1;min-width:0}
+.kg-card-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:5px}
+.kg-card-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.kg-chip{display:inline-flex;align-items:center;gap:4px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:2px 9px;font-size:11px;color:var(--text2)}
+.kg-card-desc{font-size:12px;color:var(--text2);line-height:1.6}
+.kg-del-btn{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.18);border-radius:7px;color:#ff8fa3;font-size:11px;padding:5px 10px;cursor:pointer;transition:all .15s;flex-shrink:0;font-family:'DM Sans',sans-serif}
+.kg-del-btn:hover{background:rgba(255,77,109,.18)}
+.kg-empty{text-align:center;padding:48px 24px;color:var(--muted);font-size:13px}
+.kg-empty .ico{font-size:36px;margin-bottom:10px}
 </style></head><body>
 
 <div class="sb">
@@ -396,6 +436,7 @@ tr:hover td{background:rgba(13,31,60,.5)}
     <div class="ni" onclick="showSec('laporan',this)"><span class="ic">📋</span> Semua Laporan</div>
     <div class="nav-sec">Manajemen</div>
     <div class="ni" onclick="showSec('livechat',this)"><span class="ic">💬</span> LiveChat <span id="lc-unread-badge" style="display:none;margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 7px"></span></div>
+    <div class="ni" onclick="showSec('kegiatan',this)"><span class="ic">🎪</span> Kegiatan</div>
     <div class="ni" onclick="showSec('grup',this)"><span class="ic">📡</span> Grup WhatsApp</div>
     <div class="nav-sec">Info</div>
     <div class="ni" onclick="showSec('panduan',this)"><span class="ic">📖</span> Panduan</div>
@@ -508,6 +549,44 @@ tr:hover td{background:rgba(13,31,60,.5)}
           3. Bot akan mengkonfirmasi pendaftaran grup<br>
           4. Atau gunakan form <b>Tambah Grup via Dashboard</b> di atas jika sudah tahu Group ID-nya
         </div>
+      </div>
+    </div>
+
+    <div class="sec" id="sec-kegiatan">
+      <div class="sec-title">Kegiatan Kecamatan</div>
+      <div class="sec-sub">Kelola informasi kegiatan yang tampil di menu bot WhatsApp (Menu 3)</div>
+
+      <div class="kg-form">
+        <div class="kg-form-title">➕ Tambah Kegiatan Baru</div>
+        <div class="kg-grid">
+          <div class="kg-full">
+            <label class="kg-label">Nama Kegiatan *</label>
+            <input class="kg-input" id="kg-nama" type="text" placeholder="Contoh: Gotong Royong Kelurahan Suka Maju">
+          </div>
+          <div>
+            <label class="kg-label">Hari / Tanggal</label>
+            <input class="kg-input" id="kg-tanggal" type="text" placeholder="Contoh: Sabtu, 22 Maret 2026">
+          </div>
+          <div>
+            <label class="kg-label">Tempat / Lokasi</label>
+            <input class="kg-input" id="kg-tempat" type="text" placeholder="Contoh: Kantor Kelurahan Gedung Johor">
+          </div>
+          <div class="kg-full">
+            <label class="kg-label">Deskripsi (opsional)</label>
+            <textarea class="kg-input" id="kg-deskripsi" placeholder="Keterangan singkat mengenai kegiatan ini..."></textarea>
+          </div>
+        </div>
+        <button class="kg-add-btn" onclick="addKegiatan()">➕ Tambah Kegiatan</button>
+        <div class="kg-status" id="kg-status"></div>
+      </div>
+
+      <div class="tc" style="padding:22px 24px;margin-bottom:0">
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:3px;display:flex;align-items:center;justify-content:space-between">
+          <span>📋 Daftar Kegiatan</span>
+          <span class="cnt-badge" id="kg-count">${kegiatan.length} kegiatan</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Data ini ditampilkan langsung ke warga saat memilih Menu 3 di WhatsApp Bot.</div>
+        <div id="kg-list">${kegiatanCards}</div>
       </div>
     </div>
 
@@ -770,6 +849,96 @@ function startExport(el) {
     el.classList.remove('loading');
     el.textContent = '📊 Export Excel';
   }, 4000);
+}
+
+// ── Kegiatan Kecamatan ────────────────────────────────────
+async function addKegiatan() {
+  const nama     = document.getElementById('kg-nama').value.trim();
+  const tanggal  = document.getElementById('kg-tanggal').value.trim();
+  const tempat   = document.getElementById('kg-tempat').value.trim();
+  const deskripsi= document.getElementById('kg-deskripsi').value.trim();
+  const statusEl = document.getElementById('kg-status');
+
+  if (!nama) {
+    document.getElementById('kg-nama').focus();
+    statusEl.textContent = '⚠️ Nama kegiatan wajib diisi.';
+    statusEl.className = 'kg-status err';
+    return;
+  }
+
+  statusEl.className = 'kg-status';
+  try {
+    const res  = await fetch('/api/kegiatan/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nama, tanggal, tempat, deskripsi })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Gagal');
+
+    // Reset form
+    ['kg-nama','kg-tanggal','kg-tempat','kg-deskripsi'].forEach(id => document.getElementById(id).value = '');
+
+    // Inject card baru ke atas list
+    const k = json.kegiatan;
+    const card = \`<div class="kg-card" id="kgcard-\${k.id}">
+      <div class="kg-card-ico">📌</div>
+      <div class="kg-card-body">
+        <div class="kg-card-name">\${esc(k.nama)}</div>
+        <div class="kg-card-meta">
+          \${k.tanggal ? \`<span class="kg-chip">📅 \${esc(k.tanggal)}</span>\` : ''}
+          \${k.tempat  ? \`<span class="kg-chip">📍 \${esc(k.tempat)}</span>\`  : ''}
+        </div>
+        \${k.deskripsi ? \`<div class="kg-card-desc">\${esc(k.deskripsi)}</div>\` : ''}
+      </div>
+      <button class="kg-del-btn" onclick="deleteKegiatan('\${k.id}',this)">🗑️ Hapus</button>
+    </div>\`;
+
+    const list = document.getElementById('kg-list');
+    const emptyEl = list.querySelector('.kg-empty');
+    if (emptyEl) emptyEl.remove();
+    list.insertAdjacentHTML('afterbegin', card);
+
+    // Update badge count
+    const countEl = document.getElementById('kg-count');
+    const cur = parseInt(countEl.textContent) || 0;
+    countEl.textContent = (cur + 1) + ' kegiatan';
+
+    statusEl.textContent = '✅ Kegiatan berhasil ditambahkan! Menu bot sudah diperbarui.';
+    statusEl.className = 'kg-status ok';
+    setTimeout(() => { statusEl.className = 'kg-status'; }, 4000);
+  } catch(e) {
+    statusEl.textContent = '❌ Gagal: ' + e.message;
+    statusEl.className = 'kg-status err';
+  }
+}
+
+async function deleteKegiatan(id, btn) {
+  if (!confirm('Hapus kegiatan ini dari menu bot?')) return;
+  try {
+    const res  = await fetch('/api/kegiatan/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Gagal');
+
+    const card = document.getElementById('kgcard-' + id);
+    if (card) card.remove();
+
+    const list = document.getElementById('kg-list');
+    if (!list.querySelector('.kg-card')) {
+      list.innerHTML = '<div class="kg-empty"><div class="ico">📭</div>Belum ada kegiatan. Tambahkan melalui form di atas.</div>';
+    }
+
+    // Update badge count
+    const countEl = document.getElementById('kg-count');
+    const cur = parseInt(countEl.textContent) || 1;
+    countEl.textContent = Math.max(0, cur - 1) + ' kegiatan';
+  } catch(e) {
+    alert('Gagal hapus: ' + e.message);
+  }
 }
 
 // ── Feedback ke Pelapor ───────────────────────────────────
@@ -1245,7 +1414,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (path_ === '/') return send(200, pageDashboard(getLaporan(), getGroups(), getGroupRouting()));
+  if (path_ === '/') return send(200, pageDashboard(getLaporan(), getGroups(), getGroupRouting(), getKegiatan()));
   if (path_ === '/api/laporan') return send(200, JSON.stringify(getLaporan()), 'application/json');
 
   // ── API: Tambah Grup ──
@@ -1310,6 +1479,33 @@ const server = http.createServer(async (req, res) => {
       if (!id) return send(400, JSON.stringify({ ok: false, error: 'id diperlukan' }), 'application/json');
       const deleted = deleteLaporan(id);
       if (!deleted) return send(404, JSON.stringify({ ok: false, error: 'Laporan tidak ditemukan' }), 'application/json');
+      return send(200, JSON.stringify({ ok: true }), 'application/json');
+    } catch (err) {
+      return send(500, JSON.stringify({ ok: false, error: err.message }), 'application/json');
+    }
+  }
+
+  // ── API: Tambah Kegiatan ──
+  if (path_ === '/api/kegiatan/add' && req.method === 'POST') {
+    try {
+      const body = await parseJSONBody(req);
+      const { nama, tanggal, tempat, deskripsi } = body;
+      if (!nama?.trim()) return send(400, JSON.stringify({ ok: false, error: 'Nama kegiatan wajib diisi' }), 'application/json');
+      const kegiatan = addKegiatan({ nama: nama.trim(), tanggal: (tanggal||'').trim(), tempat: (tempat||'').trim(), deskripsi: (deskripsi||'').trim() });
+      return send(200, JSON.stringify({ ok: true, kegiatan }), 'application/json');
+    } catch (err) {
+      return send(500, JSON.stringify({ ok: false, error: err.message }), 'application/json');
+    }
+  }
+
+  // ── API: Hapus Kegiatan ──
+  if (path_ === '/api/kegiatan/delete' && req.method === 'POST') {
+    try {
+      const body = await parseJSONBody(req);
+      const { id } = body;
+      if (!id) return send(400, JSON.stringify({ ok: false, error: 'id diperlukan' }), 'application/json');
+      const deleted = deleteKegiatan(id);
+      if (!deleted) return send(404, JSON.stringify({ ok: false, error: 'Kegiatan tidak ditemukan' }), 'application/json');
       return send(200, JSON.stringify({ ok: true }), 'application/json');
     } catch (err) {
       return send(500, JSON.stringify({ ok: false, error: err.message }), 'application/json');
